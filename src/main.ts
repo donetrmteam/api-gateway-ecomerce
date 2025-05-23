@@ -18,6 +18,7 @@ async function bootstrap() {
     .addTag('auth', 'Operaciones de autenticación')
     .addTag('products', 'Operaciones relacionadas con productos')
     .addTag('users', 'Operaciones relacionadas con usuarios')
+    .addTag('cart', 'Operaciones relacionadas con el carrito de compras')
     .addBearerAuth({
       type: 'http',
       scheme: 'bearer',
