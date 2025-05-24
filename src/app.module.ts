@@ -7,6 +7,7 @@ import { TcpModule } from './tcp/tcp.module';
 import { AuthModule } from './auth/auth.module';
 import { CartModule } from './cart/cart.module';
 import { OrdersModule } from './orders/orders.module';
+import { PaymentModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { OrdersModule } from './orders/orders.module';
     UsersModule,
     CartModule,
     OrdersModule,
+    PaymentModule
   ],
 })
 export class AppModule {}
