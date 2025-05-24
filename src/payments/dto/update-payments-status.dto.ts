@@ -4,10 +4,10 @@ import { IsIn } from "class-validator";
 export class UpdatePaymentStatusDto {
     @ApiProperty({
         description: 'Nuevo estado de pago',
-        example: 'PAID',
-        enum: ['PENDING', 'PAID', 'FAILED']
+        example: 'PAGADO',
+        enum: ['PENDIENTE', 'PAGADO', 'FALLO']
     })
-    @IsIn(['PENDING', 'PAID', 'FAILED'], {
+    @IsIn(['PENDIENTE', 'PAGADO', 'FALLO'], {
         message: 'El estado debe ser uno de los siguientes : PENDING, PAID, FAILED',
     })
     status: string

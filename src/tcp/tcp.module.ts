@@ -41,7 +41,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         transport: Transport.TCP,
         options: {
           host: process.env.PAYMENT_SERVICE_HOST || 'localhost',
-          port: process.env.PAYMENT_SERVICE_PORT ? parseInt(process.env.PAYMENT_SERVICE_PORT): 3004
+          port: process.env.PAYMENT_SERVICE_PORT ? parseInt(process.env.PAYMENT_SERVICE_PORT): 3005
         },
       }
     ]),

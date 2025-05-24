@@ -9,12 +9,12 @@ import { UpdatePaymentStatusDto } from "./dto/update-payments-status.dto";
 @Controller('payments')
 export class PaymentsController {
     constructor(
-        @Inject('PAYMENT_SERVICE') private readonly paymentServiceClient: ClientProxy
+        @Inject('PAYMENT_SERVICE') private readonly paymentServiceClient: ClientProxy,
     ) {}
 
   @Post()
-  //@UseGuards(JwtAuthGuard)
-  //@ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear nuevo pago' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Pago creado exitosamente' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Datos inválidos'})
@@ -29,8 +29,8 @@ export class PaymentsController {
 
 
   @Get()
-  //@UseGuards(JwtAuthGuard)
-  //@ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Obtener todos los pagos',
     description: 'Obtener todos los pagos de los prodcutos'
@@ -88,8 +88,8 @@ export class PaymentsController {
   }
 
   @Patch(':id/status')
-  //@UseGuards(JwtAuthGuard)
-  //@ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Udate payment status',
     description: 'Actualizar el status del pago' 
@@ -116,7 +116,7 @@ export class PaymentsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'No autorizado'})
   async remove(@Param('id') id: string) {
     return this.paymentServiceClient.send(
-      { cmd: 'remove_payment' }, 
+      { cmd: 'remove_payment_by_order_id' }, 
       { id });
   }
 
