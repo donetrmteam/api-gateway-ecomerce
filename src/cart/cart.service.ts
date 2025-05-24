@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { AddToCartGatewayDto } from './dto/add-to-cart.dto';
@@ -6,6 +6,8 @@ import { UpdateCartItemGatewayDto } from './dto/update-cart-item.dto';
 
 @Injectable()
 export class CartGatewayService implements OnModuleInit {
+  private readonly logger = new Logger('CartGatewayService');
+
   constructor(
     @Inject('CART_SERVICE') private readonly cartServiceClient: ClientProxy,
   ) {}
@@ -15,6 +17,7 @@ export class CartGatewayService implements OnModuleInit {
   }
 
   async getCart(userId: string) {
+    this.logger.log(`Getting cart for user ${userId}`);
     return firstValueFrom(
       this.cartServiceClient.send({ cmd: 'get_cart' }, { userId }),
     );

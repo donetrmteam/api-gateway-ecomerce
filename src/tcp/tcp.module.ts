@@ -28,6 +28,14 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
           port: process.env.CART_SERVICE_PORT ? parseInt(process.env.CART_SERVICE_PORT) : 3003,
         },
       },
+      {
+        name: 'ORDER_SERVICE',
+        transport: Transport.TCP,
+        options: {
+          host: process.env.ORDER_SERVICE_HOST || 'localhost',
+          port: process.env.ORDER_SERVICE_PORT ? parseInt(process.env.ORDER_SERVICE_PORT) : 3004,
+        },
+      },
     ]),
   ],
   exports: [ClientsModule],
