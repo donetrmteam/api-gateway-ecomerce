@@ -69,9 +69,7 @@ export class OrdersController {
         orderId: order.id,
         userId: user.userId,
         amount: order.total,
-        paymentMethod: 'Tarjeta',
-        status: 'PENDIENTE',         
-        cardNumber: '4234567891236547',
+        status: 'PENDIENTE'
       };
 
       const paymentResult = await firstValueFrom(
@@ -144,7 +142,10 @@ export class OrdersController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Orden no encontrada' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'La orden no está en estado PENDIENTE' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'No autorizado' })
-  async finalizeOrder(@Param('id') id: string) {
+  async finalizeOrder(
+    @Param('id') id: string,
+    @Body() body: { cardNumber: string, paymentMethod: string }
+  ) {
     try {
       const order = await firstValueFrom(
         this.orderServiceClient.send(
@@ -156,7 +157,12 @@ export class OrdersController {
       await firstValueFrom(
         this.paymentServiceClient.send(
           { cmd : 'update_payment_status'},
-          {orderId: id, status: 'PAGADO'}
+          { 
+            orderId: id, 
+            status: 'PAGADO',
+            cardNumber: body.cardNumber,
+            paymentMethod: body.paymentMethod
+          }
         )
       ); 
 

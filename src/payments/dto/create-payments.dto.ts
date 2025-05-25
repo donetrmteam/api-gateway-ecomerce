@@ -18,36 +18,19 @@ export class CreatePaymentDto {
 
     @ApiProperty({
         description: 'Monto del pago',
-        example: 100.50, 
+        example: 100.50,
     })
     @IsNumber({maxDecimalPlaces: 10}, { message: 'El monto de pago debe ser un número' })
     @Min(0, { message: 'El monto debe ser mayor a 0' })
     amount: number;
 
-    @ApiProperty({
-        description: 'Método de pago utilizado',
-        example: 'Tarjeta',
-    })
-    @IsString({ message: 'El método de pago debe ser una cadena de texto' })
-    @MaxLength(50, { message: 'El metodo de pago no puede exceder los 50 caracteres' })
-    paymentMethod: string;
 
     @ApiProperty({
         description: 'Estado del pago',
-        example: 'PAID',
+        example: 'PAGADO',
         enum: ['PENDIENTE', 'PAGADO', 'FALLO'],
     })
-    @IsIn(['PENDIENTE', 'PAGADO', 'FALLO'], { message: 'El estado debe ser uno de los siguientes: PENDING, PAID, FAILED' })
+    @IsIn(['PENDIENTE', 'PPAGADO', 'FALLO'], { message: 'El estado debe ser uno de los siguientes: PENDING, PAID, FAILED' })
     status: string;
-
-
-     @ApiProperty({
-        description: 'Numero de tarjeta',
-        example: '12542548254932654',
-        required: false,
-    })
-    @IsOptional()
-    @IsString({ message: 'La tarjeta debe ser una cadena de texto' })    
-    @MaxLength(16, { message: 'El número de tarjeta no puede exceder los 16 caracteres' })
-    cardNumber?: string;
+    
 }
