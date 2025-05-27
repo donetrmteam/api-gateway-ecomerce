@@ -6,10 +6,10 @@ pipeline {
     }
 
     environment {
-        EC2_SERVER = '54.235.214.15'
+        EC2_SERVER = '34.197.126.56'
         DEPLOY_USER = 'ubuntu'
-        APP_DIR = '/home/ubuntu/user-service-ecommerce'
-        APP_REPO_URL = 'https://github.com/donetrmteam/user-service-ecommerce.git'
+        APP_DIR = '/home/ubuntu/api-gateway-ecomerce'
+        APP_REPO_URL = 'https://github.com/donetrmteam/api-gateway-ecomerce.git'
         PORT_DEV = '3000'
         PORT_QA = '3001'
         PORT_MAIN = '3002'
