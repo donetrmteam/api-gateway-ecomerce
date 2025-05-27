@@ -68,7 +68,7 @@ pipeline {
                         return
                     }
 
-                    withCredentials([sshUserPrivateKey(credentialsId: 'server-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-lucas', keyFileVariable: 'SSH_KEY')]) {
                         sh """
                             # Limpiar known_hosts para evitar conflictos de SSH key
                             ssh-keygen -f '/var/lib/jenkins/.ssh/known_hosts' -R '${EC2_SERVER}' || true
