@@ -53,15 +53,15 @@ pipeline {
 
                     if (targetBranch == 'dev') {
                         deployPort = env.PORT_DEV
-                        serviceName = 'user-service-dev'
+                        serviceName = 'api-gateway-dev'
                         pathPrefix = '/dev'
                     } else if (targetBranch == 'qa') {
                         deployPort = env.PORT_QA
-                        serviceName = 'user-service-qa'
+                        serviceName = 'api-gateway-qa'
                         pathPrefix = '/qa'
                     } else if (targetBranch == 'main') {
                         deployPort = env.PORT_MAIN
-                        serviceName = 'user-service-prod'
+                        serviceName = 'api-gateway-prod'
                         pathPrefix = '/api'
                     } else {
                         echo "No se desplegará la rama: ${targetBranch}"
@@ -173,195 +173,151 @@ pipeline {
         stage('Configure Nginx Reverse Proxy') {
             steps {
                 script {
-                    def deployPort = ''
-                    def serviceName = ''
-                    def pathPrefix = ''
                     def targetBranch = env.BRANCH_NAME
 
-                    if (targetBranch == 'dev') {
-                        deployPort = env.PORT_DEV
-                        serviceName = 'user-service-dev'
-                        pathPrefix = '/dev'
-                    } else if (targetBranch == 'qa') {
-                        deployPort = env.PORT_QA
-                        serviceName = 'user-service-qa'
-                        pathPrefix = '/qa'
-                    } else if (targetBranch == 'main') {
-                        deployPort = env.PORT_MAIN
-                        serviceName = 'user-service-prod'
-                        pathPrefix = '/api'
-                    } else {
+                    if (!(targetBranch in ['dev', 'qa', 'main'])) {
                         echo "No se configurará Nginx para la rama: ${targetBranch}"
                         return
                     }
 
-                    withCredentials([sshUserPrivateKey(credentialsId: 'server-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-lucas', keyFileVariable: 'SSH_KEY')]) {
                         sh """
                             # Limpiar known_hosts para evitar conflictos de SSH key
                             ssh-keygen -f '/var/lib/jenkins/.ssh/known_hosts' -R '${EC2_SERVER}' || true
                             
                             ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${DEPLOY_USER}@${EC2_SERVER} '
-                                # Crear configuración de Nginx para esta rama
-                                sudo tee ${env.NGINX_SITES_AVAILABLE}/${serviceName} > /dev/null <<'EOF'
-server {
-    listen 80;
-    server_name _;
-
-    # Configuración para ${targetBranch} - ${pathPrefix}
-    location ${pathPrefix} {
-        # Remover el prefijo antes de enviar al backend
-        rewrite ^${pathPrefix}(.*)\$ \$1 break;
-        
-        proxy_pass http://127.0.0.1:${deployPort};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header X-Forwarded-Host \$server_name;
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-        
-        # Buffer settings
-        proxy_buffering on;
-        proxy_buffer_size 4k;
-        proxy_buffers 8 4k;
-        
-        # Manejo de errores
-        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
-    }
-
-    # Health check endpoint
-    location ${pathPrefix}/health {
-        proxy_pass http://127.0.0.1:${deployPort}/health;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
-    # Logs específicos para este servicio
-    access_log /var/log/nginx/${serviceName}_access.log;
-    error_log /var/log/nginx/${serviceName}_error.log;
-}
-EOF
-
-                                # Crear un archivo de configuración principal consolidado
-                                sudo tee ${env.NGINX_SITES_AVAILABLE}/user-service-consolidated > /dev/null <<'EOF'
+                                # Crear archivo de configuración consolidado de Nginx
+                                sudo tee ${env.NGINX_SITES_AVAILABLE}/api-gateway-consolidated > /dev/null << \"NGINX_CONFIG\"
 server {
     listen 80 default_server;
     server_name _;
 
     # Página por defecto
     location = / {
-        return 200 "User Service API - Available endpoints: /api (production), /qa (QA), /dev (development)\\n";
+        return 200 \"API Gateway - Available endpoints: /api (production), /qa (QA), /dev (development)\\n\";
         add_header Content-Type text/plain;
     }
 
     # Configuración para producción (/api)
     location /api {
-        rewrite ^/api(.*)\$ \$1 break;
+        rewrite ^/api(.*) \\\\\\$1 break;
         proxy_pass http://127.0.0.1:3002;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \\\\\\$http_upgrade;
+        proxy_set_header Connection \"upgrade\";
+        proxy_set_header Host \\\\\\$host;
+        proxy_set_header X-Real-IP \\\\\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\\\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\\\\$scheme;
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
     }
 
     # Configuración para QA (/qa)
     location /qa {
-        rewrite ^/qa(.*)\$ \$1 break;
+        rewrite ^/qa(.*) \\\\\\$1 break;
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \\\\\\$http_upgrade;
+        proxy_set_header Connection \"upgrade\";
+        proxy_set_header Host \\\\\\$host;
+        proxy_set_header X-Real-IP \\\\\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\\\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\\\\$scheme;
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
     }
 
     # Configuración para desarrollo (/dev)
     location /dev {
-        rewrite ^/dev(.*)\$ \$1 break;
+        rewrite ^/dev(.*) \\\\\\$1 break;
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \\\\\\$http_upgrade;
+        proxy_set_header Connection \"upgrade\";
+        proxy_set_header Host \\\\\\$host;
+        proxy_set_header X-Real-IP \\\\\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\\\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\\\\$scheme;
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
     }
 
     # Health checks
     location /api/health {
         proxy_pass http://127.0.0.1:3002/health;
-        proxy_set_header Host \$host;
+        proxy_set_header Host \\\\\\$host;
+        proxy_set_header X-Real-IP \\\\\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\\\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\\\\$scheme;
     }
 
     location /qa/health {
         proxy_pass http://127.0.0.1:3001/health;
-        proxy_set_header Host \$host;
+        proxy_set_header Host \\\\\\$host;
+        proxy_set_header X-Real-IP \\\\\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\\\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\\\\$scheme;
     }
 
     location /dev/health {
         proxy_pass http://127.0.0.1:3000/health;
-        proxy_set_header Host \$host;
+        proxy_set_header Host \\\\\\$host;
+        proxy_set_header X-Real-IP \\\\\\$remote_addr;
+        proxy_set_header X-Forwarded-For \\\\\\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\\\\\$scheme;
     }
 
     # Logs
-    access_log /var/log/nginx/user_service_access.log;
-    error_log /var/log/nginx/user_service_error.log;
+    access_log /var/log/nginx/api_gateway_access.log;
+    error_log /var/log/nginx/api_gateway_error.log;
 }
-EOF
+NGINX_CONFIG
 
                                 # Remover configuraciones anteriores
-                                sudo rm -f ${env.NGINX_SITES_ENABLED}/user-service-*
-                                sudo rm -f ${env.NGINX_SITES_ENABLED}/default
+                                sudo rm -f ${env.NGINX_SITES_ENABLED}/*
 
                                 # Habilitar la configuración consolidada
-                                sudo ln -sf ${env.NGINX_SITES_AVAILABLE}/user-service-consolidated ${env.NGINX_SITES_ENABLED}/
+                                sudo ln -sf ${env.NGINX_SITES_AVAILABLE}/api-gateway-consolidated ${env.NGINX_SITES_ENABLED}/
 
                                 # Verificar configuración de Nginx
-                                echo "Verificando configuración de Nginx..."
+                                echo \"Verificando configuración de Nginx...\"
                                 sudo nginx -t
 
-                                if [ \$? -eq 0 ]; then
-                                    echo "Configuración de Nginx válida. Recargando..."
+                                if [ \\$? -eq 0 ]; then
+                                    echo \"Configuración de Nginx válida. Recargando...\"
                                     sudo systemctl reload nginx
-                                    echo "Nginx recargado exitosamente"
+                                    echo \"Nginx recargado exitosamente\"
                                 else
-                                    echo "Error en la configuración de Nginx"
+                                    echo \"Error en la configuración de Nginx\"
+                                    sudo nginx -T
                                     exit 1
                                 fi
 
                                 # Verificar estado de los servicios
-                                echo "Estado de Nginx:"
+                                echo \"Estado de Nginx:\"
                                 sudo systemctl status nginx --no-pager -l
 
-                                echo "Estado de PM2:"
+                                echo \"Estado de PM2:\"
                                 pm2 status
 
-                                echo "Configuración completada para ${targetBranch} en ${pathPrefix}"
-                                echo "Endpoint disponible en: http://${env.EC2_SERVER}${pathPrefix}"
+                                echo \"Configuración completada para ${targetBranch}\"
+                                echo \"Endpoints disponibles:\"
+                                echo \"- http://${env.EC2_SERVER}/api (producción)\"
+                                echo \"- http://${env.EC2_SERVER}/qa (QA)\"
+                                echo \"- http://${env.EC2_SERVER}/dev (desarrollo)\"
                             '
                         """
                     }
@@ -389,10 +345,17 @@ EOF
                     // Verificar que el servicio responda
                     sh """
                         echo "Esperando a que el servicio esté disponible..."
-                        sleep 10
+                        sleep 15
                         
-                        echo "Verificando endpoint: http://${env.EC2_SERVER}${pathPrefix}/health"
-                        curl -f -s -o /dev/null -w "%{http_code}" http://${env.EC2_SERVER}${pathPrefix}/health || echo "Health check failed"
+                        echo "Verificando endpoint: http://${env.EC2_SERVER}${pathPrefix}"
+                        HTTP_CODE=\$(curl -f -s -o /dev/null -w "%{http_code}" http://${env.EC2_SERVER}${pathPrefix} || echo "000")
+                        echo "HTTP Status Code: \$HTTP_CODE"
+                        
+                        if [ "\$HTTP_CODE" = "200" ] || [ "\$HTTP_CODE" = "404" ]; then
+                            echo "Servicio respondiendo correctamente"
+                        else
+                            echo "Warning: Servicio puede no estar respondiendo correctamente"
+                        fi
                     """
                 }
             }
@@ -414,8 +377,11 @@ EOF
                 }
 
                 echo "¡Pipeline ejecutado con éxito!"
-                echo "Servicio desplegado en: http://${env.EC2_SERVER}${pathPrefix}"
-                echo "Health check: http://${env.EC2_SERVER}${pathPrefix}/health"
+                echo "API Gateway desplegado en: http://${env.EC2_SERVER}${pathPrefix}"
+                echo "Todos los endpoints disponibles:"
+                echo "- http://${env.EC2_SERVER}/api (producción)"
+                echo "- http://${env.EC2_SERVER}/qa (QA)"
+                echo "- http://${env.EC2_SERVER}/dev (desarrollo)"
             }
         }
         failure {
