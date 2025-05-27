@@ -77,78 +77,77 @@ pipeline {
                                 fi
 
                                 # Crear una única configuración de Nginx para todos los servicios
-                                sudo tee /etc/nginx/conf.d/api-gateway.conf << "NGINXEOF"
+                                sudo tee /etc/nginx/conf.d/api-gateway.conf << "EOF"
 server {
     listen 80;
     server_name _;
 
-    # Configuración para desarrollo
+# Configuración para desarrollo
     location /dev {
-        proxy_pass http://localhost:${env.PORT_DEV};
+        proxy_pass http://localhost:${PORT_DEV};
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
 
     # Configuración para QA
     location /qa {
-        proxy_pass http://localhost:${env.PORT_QA};
+        proxy_pass http://localhost:${PORT_QA};
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
 
     # Configuración para producción
     location /prod {
-        proxy_pass http://localhost:${env.PORT_MAIN};
+        proxy_pass http://localhost:${PORT_MAIN};
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
 
     # Ruta por defecto que redirige a producción
     location / {
-        proxy_pass http://localhost:${env.PORT_MAIN};
+        proxy_pass http://localhost:${PORT_MAIN};
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
 }
-NGINXEOF
+EOF
 
                                 # Eliminar configuraciones antiguas y mantener solo la nueva
                                 sudo rm -f /etc/nginx/conf.d/user-service-*.conf
-                                sudo rm -f /etc/nginx/sites-enabled/user-service-*
 
                                 # Verificar y recargar configuración de Nginx
                                 sudo nginx -t && sudo systemctl reload nginx
 
                                 # Instalar NVM si no existe
-                                export NVM_DIR="\\$HOME/.nvm"
-                                if [ ! -d "\\$NVM_DIR" ]; then
+                                export NVM_DIR="\$HOME/.nvm"
+                                if [ ! -d "\$NVM_DIR" ]; then
                                     echo "Instalando NVM..."
                                     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
                                 fi
 
                                 # Cargar NVM
-                                [ -s "\\$NVM_DIR/nvm.sh" ] && \\. "\\$NVM_DIR/nvm.sh"
-                                [ -s "\\$NVM_DIR/bash_completion" ] && \\. "\\$NVM_DIR/bash_completion"
+                                [ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"
+                                [ -s "\$NVM_DIR/bash_completion" ] && \\. "\$NVM_DIR/bash_completion"
 
                                 # Instalar Node LTS
                                 echo "Instalando Node.js LTS..."
@@ -175,28 +174,28 @@ NGINXEOF
                                 APP_BRANCH_DIR="${APP_DIR}-${targetBranch}"
                                 
                                 # Clonar o actualizar repositorio
-                                if [ ! -d \\$APP_BRANCH_DIR ]; then
+                                if [ ! -d \${APP_BRANCH_DIR} ]; then
                                     echo "Clonando repositorio..."
-                                    git clone -b ${targetBranch} ${env.APP_REPO_URL} \\$APP_BRANCH_DIR
+                                    git clone -b ${targetBranch} ${env.APP_REPO_URL} \${APP_BRANCH_DIR}
                                 else
                                     echo "Actualizando repositorio..."
-                                    cd \\$APP_BRANCH_DIR
+                                    cd \${APP_BRANCH_DIR}
                                     git fetch --all
                                     git checkout ${targetBranch}
                                     git pull origin ${targetBranch}
                                 fi
 
                                 # Cargar NVM en el entorno de ejecución
-                                export NVM_DIR="\\$HOME/.nvm"
-                                [ -s "\\$NVM_DIR/nvm.sh" ] && \\. "\\$NVM_DIR/nvm.sh"
+                                export NVM_DIR="\$HOME/.nvm"
+                                [ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"
                                 nvm use --lts
 
                                 # Instalar dependencias
-                                cd \\$APP_BRANCH_DIR
+                                cd \${APP_BRANCH_DIR}
                                 npm ci
 
                                 # Compilar la aplicación NestJS
-                                if grep -q "\\\\"build\\\\"" package.json; then
+                                if grep -q "\\\"build\\\"" package.json; then
                                     echo "Ejecutando build..."
                                     npm run build
                                 else
