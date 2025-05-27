@@ -82,9 +82,19 @@ server {
     listen 80;
     server_name _;
 
-    location ${nginxPrefix} {
-        rewrite ^${nginxPrefix}(/.*)\$ \$1 break;
-        proxy_pass http://localhost:${deployPort};
+    # Ruta con prefijo específico para cada ambiente
+    location ${nginxPrefix}/ {
+        proxy_pass http://localhost:${deployPort}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    # Ruta por defecto que redirige a producción
+    location / {
+        proxy_pass http://localhost:${PORT_MAIN}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -161,8 +171,13 @@ EOF
                                     echo "No hay script de build en package.json, omitiendo este paso"
                                 fi
 
-                                # Crear o actualizar archivo de configuración del entorno
-                                echo "TCP_PORT=${deployPort}" > .env
+                                # Crear archivo de configuración del entorno solo si no existe
+                                if [ ! -f .env ]; then
+                                    echo "Creando archivo .env inicial..."
+                                    echo "TCP_PORT=${deployPort}" > .env
+                                else
+                                    echo "Archivo .env ya existe, manteniendo configuración actual"
+                                fi
 
                                 # Reiniciar o iniciar con PM2
                                 if pm2 list | grep -q "${serviceName}"; then
