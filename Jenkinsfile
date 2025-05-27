@@ -77,19 +77,19 @@ pipeline {
                                 fi
 
                                 # Crear configuración de Nginx para esta rama
-                                sudo tee /etc/nginx/conf.d/${serviceName}.conf << EOF
+                                sudo tee /etc/nginx/conf.d/${serviceName}.conf << "EOF"
 server {
     listen 80;
     server_name _;
 
     location ${nginxPrefix} {
-        rewrite ^${nginxPrefix}(/.*)$ \\$1 break;
+        rewrite ^${nginxPrefix}(/.*)\$ \$1 break;
         proxy_pass http://localhost:${deployPort};
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \\$http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \\$host;
-        proxy_cache_bypass \\$http_upgrade;
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
     }
 }
 EOF
