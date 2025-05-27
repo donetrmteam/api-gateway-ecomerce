@@ -10,7 +10,7 @@ async function bootstrap() {
   // Habilitar CORS
   app.enableCors();
   
-  // Configuración Swagger
+  // Configuración Swagger 
   const config = new DocumentBuilder()
     .setTitle('API Gateway')
     .setDescription('API Gateway para los servicios de productos y usuarios')
@@ -20,7 +20,7 @@ async function bootstrap() {
     .addTag('users', 'Operaciones relacionadas con usuarios')
     .addTag('cart', 'Operaciones relacionadas con el carrito de compras')
     .addBearerAuth({
-      type: 'http',
+      type: 'http', 
       scheme: 'bearer',
       bearerFormat: 'JWT',
       name: 'JWT',

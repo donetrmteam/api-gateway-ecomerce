@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { User } from '../decorators/user.decorator';
 import { firstValueFrom, timeout, catchError } from 'rxjs';
+import { FinalizeOrderDto } from './dto/finalize-orden.dto';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -144,7 +145,7 @@ export class OrdersController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'No autorizado' })
   async finalizeOrder(
     @Param('id') id: string,
-    @Body() body: { cardNumber: string, paymentMethod: string }
+    @Body() body: FinalizeOrderDto
   ) {
     try {
       const order = await firstValueFrom(
