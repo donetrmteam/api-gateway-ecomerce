@@ -76,33 +76,68 @@ pipeline {
                                     sudo apt install -y nginx
                                 fi
 
-                                # Crear configuración de Nginx para esta rama
-                                sudo tee /etc/nginx/conf.d/${serviceName}.conf << "EOF"
+                                # Crear una única configuración de Nginx para todos los servicios
+                                sudo tee /etc/nginx/conf.d/api-gateway.conf << "EOF"
 server {
     listen 80;
     server_name _;
 
-    # Ruta con prefijo específico para cada ambiente
-    location ${nginxPrefix}/ {
-        proxy_pass http://localhost:${deployPort}/;
+    # Configuración para desarrollo
+    location /dev {
+        proxy_pass http://localhost:${PORT_DEV};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Configuración para QA
+    location /qa {
+        proxy_pass http://localhost:${PORT_QA};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Configuración para producción
+    location /prod {
+        proxy_pass http://localhost:${PORT_MAIN};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     # Ruta por defecto que redirige a producción
     location / {
-        proxy_pass http://localhost:${PORT_MAIN}/;
+        proxy_pass http://localhost:${PORT_MAIN};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
+
+                                # Eliminar configuraciones antiguas y mantener solo la nueva
+                                sudo rm -f /etc/nginx/conf.d/user-service-*.conf
 
                                 # Verificar y recargar configuración de Nginx
                                 sudo nginx -t && sudo systemctl reload nginx
