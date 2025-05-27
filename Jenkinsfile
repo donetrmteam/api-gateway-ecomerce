@@ -70,7 +70,10 @@ pipeline {
 
                     withCredentials([sshUserPrivateKey(credentialsId: 'server-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                         sh """
-                            ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${DEPLOY_USER}@${EC2_SERVER} '
+                            # Limpiar known_hosts para evitar conflictos de SSH key
+                            ssh-keygen -f '/var/lib/jenkins/.ssh/known_hosts' -R '${EC2_SERVER}' || true
+                            
+                            ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${DEPLOY_USER}@${EC2_SERVER} '
                                 # Actualizar repositorios
                                 sudo apt update && sudo apt upgrade -y
 
@@ -194,27 +197,30 @@ pipeline {
 
                     withCredentials([sshUserPrivateKey(credentialsId: 'server-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                         sh """
-                            ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${DEPLOY_USER}@${EC2_SERVER} '
+                            # Limpiar known_hosts para evitar conflictos de SSH key
+                            ssh-keygen -f '/var/lib/jenkins/.ssh/known_hosts' -R '${EC2_SERVER}' || true
+                            
+                            ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${DEPLOY_USER}@${EC2_SERVER} '
                                 # Crear configuración de Nginx para esta rama
-                                sudo tee ${env.NGINX_SITES_AVAILABLE}/${serviceName} > /dev/null <<EOF
+                                sudo tee ${env.NGINX_SITES_AVAILABLE}/${serviceName} > /dev/null <<'EOF'
 server {
     listen 80;
-    server_name ${env.EC2_SERVER};
+    server_name _;
 
     # Configuración para ${targetBranch} - ${pathPrefix}
     location ${pathPrefix} {
         # Remover el prefijo antes de enviar al backend
-        rewrite ^${pathPrefix}(.*)\$ \\\$1 break;
+        rewrite ^${pathPrefix}(.*)\$ \$1 break;
         
         proxy_pass http://127.0.0.1:${deployPort};
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \\\$http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host \\\$host;
-        proxy_set_header X-Real-IP \\\$remote_addr;
-        proxy_set_header X-Forwarded-For \\\$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \\\$scheme;
-        proxy_set_header X-Forwarded-Host \\\$server_name;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$server_name;
         
         # Timeouts
         proxy_connect_timeout 60s;
@@ -233,10 +239,10 @@ server {
     # Health check endpoint
     location ${pathPrefix}/health {
         proxy_pass http://127.0.0.1:${deployPort}/health;
-        proxy_set_header Host \\\$host;
-        proxy_set_header X-Real-IP \\\$remote_addr;
-        proxy_set_header X-Forwarded-For \\\$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \\\$scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     # Logs específicos para este servicio
@@ -245,39 +251,94 @@ server {
 }
 EOF
 
-                                # Crear un archivo de configuración principal si no existe
-                                if [ ! -f ${env.NGINX_SITES_AVAILABLE}/user-service-main ]; then
-                                    sudo tee ${env.NGINX_SITES_AVAILABLE}/user-service-main > /dev/null <<EOF
+                                # Crear un archivo de configuración principal consolidado
+                                sudo tee ${env.NGINX_SITES_AVAILABLE}/user-service-consolidated > /dev/null <<'EOF'
 server {
     listen 80 default_server;
-    server_name ${env.EC2_SERVER} localhost;
+    server_name _;
 
-    # Página por defecto o redirección
-    location / {
-        return 200 "User Service API - Available endpoints: /api (production), /qa (QA), /dev (development)";
+    # Página por defecto
+    location = / {
+        return 200 "User Service API - Available endpoints: /api (production), /qa (QA), /dev (development)\\n";
         add_header Content-Type text/plain;
     }
 
-    # Incluir todas las configuraciones de servicios
-    include ${env.NGINX_SITES_AVAILABLE}/user-service-*;
+    # Configuración para producción (/api)
+    location /api {
+        rewrite ^/api(.*)\$ \$1 break;
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Configuración para QA (/qa)
+    location /qa {
+        rewrite ^/qa(.*)\$ \$1 break;
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Configuración para desarrollo (/dev)
+    location /dev {
+        rewrite ^/dev(.*)\$ \$1 break;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Health checks
+    location /api/health {
+        proxy_pass http://127.0.0.1:3002/health;
+        proxy_set_header Host \$host;
+    }
+
+    location /qa/health {
+        proxy_pass http://127.0.0.1:3001/health;
+        proxy_set_header Host \$host;
+    }
+
+    location /dev/health {
+        proxy_pass http://127.0.0.1:3000/health;
+        proxy_set_header Host \$host;
+    }
+
+    # Logs
+    access_log /var/log/nginx/user_service_access.log;
+    error_log /var/log/nginx/user_service_error.log;
 }
 EOF
-                                fi
 
-                                # Habilitar el sitio si no está habilitado
-                                if [ ! -L ${env.NGINX_SITES_ENABLED}/${serviceName} ]; then
-                                    sudo ln -sf ${env.NGINX_SITES_AVAILABLE}/${serviceName} ${env.NGINX_SITES_ENABLED}/
-                                fi
+                                # Remover configuraciones anteriores
+                                sudo rm -f ${env.NGINX_SITES_ENABLED}/user-service-*
+                                sudo rm -f ${env.NGINX_SITES_ENABLED}/default
 
-                                # Habilitar configuración principal si no está habilitada
-                                if [ ! -L ${env.NGINX_SITES_ENABLED}/user-service-main ]; then
-                                    sudo ln -sf ${env.NGINX_SITES_AVAILABLE}/user-service-main ${env.NGINX_SITES_ENABLED}/
-                                fi
-
-                                # Remover configuración por defecto de Nginx si existe
-                                if [ -L ${env.NGINX_SITES_ENABLED}/default ]; then
-                                    sudo rm ${env.NGINX_SITES_ENABLED}/default
-                                fi
+                                # Habilitar la configuración consolidada
+                                sudo ln -sf ${env.NGINX_SITES_AVAILABLE}/user-service-consolidated ${env.NGINX_SITES_ENABLED}/
 
                                 # Verificar configuración de Nginx
                                 echo "Verificando configuración de Nginx..."
