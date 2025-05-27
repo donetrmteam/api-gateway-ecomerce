@@ -62,7 +62,7 @@ pipeline {
                         return
                     }
 
-                    withCredentials([sshUserPrivateKey(credentialsId: 'server-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-lucas', keyFileVariable: 'SSH_KEY')]) {
                         sh """
                             ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${DEPLOY_USER}@${EC2_SERVER} '
                                 # Actualizar repositorios
