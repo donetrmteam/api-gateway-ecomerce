@@ -12,4 +12,4 @@ export class FinalizeOrderDto {
     example: 'Tarjeta',
   })
   paymentMethod: string;
-}
+} 
