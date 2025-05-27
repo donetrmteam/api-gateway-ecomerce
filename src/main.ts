@@ -23,10 +23,9 @@ async function bootstrap() {
     .addTag('products', 'Operaciones relacionadas con productos')
     .addTag('users', 'Operaciones relacionadas con usuarios')
     .addTag('cart', 'Operaciones relacionadas con el carrito de compras')
-    .addServer("/", "Raíz (Producción)")
-    .addServer("/prod", "Producción (/prod)")
-    .addServer("/dev", "Desarrollo (/dev)")
-    .addServer("/qa", "QA (/qa)")
+    .addServer("/", "Producción")
+    .addServer("/dev", "Desarrollo")
+    .addServer("/qa", "QA")
     .addBearerAuth({
       type: 'http', 
       scheme: 'bearer',
