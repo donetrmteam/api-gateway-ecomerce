@@ -3,6 +3,10 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
+import { parse } from 'path';
+import * as dotenv from 'dotenv'
+
+dotenv.config()
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -38,7 +42,7 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  console.log(`API Gateway iniciado en puerto 3012`);
-  await app.listen(3012);
+  console.log(`API Gateway iniciado en puerto `, process.env.TCP_PORT);
+  await app.listen(parseInt(process.env.TCP_PORT || '3012'));
 }
 bootstrap();
