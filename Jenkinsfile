@@ -159,9 +159,9 @@ pipeline {
                                 echo "Configurando Nginx para ${serviceName} en el puerto ${deployPort} con prefijo /${targetBranch}..."
                                 NGINX_CONF_DIR="/etc/nginx/sites-available"
                                 NGINX_ENABLED_DIR="/etc/nginx/sites-enabled"
-                                NGINX_CONF_FILE="${NGINX_CONF_DIR}/${serviceName}"
+                                NGINX_CONF_FILE="\${NGINX_CONF_DIR}/${serviceName}"
 
-                                sudo tee "${NGINX_CONF_FILE}" > /dev/null <<EOL
+                                sudo tee "\${NGINX_CONF_FILE}" > /dev/null <<EOL
 server {
     listen 80;
     server_name ${EC2_SERVER}; # O tu dominio
@@ -181,8 +181,8 @@ server {
 EOL
 
                                 # Crear enlace simbólico si no existe
-                                if [ ! -L "${NGINX_ENABLED_DIR}/${serviceName}" ]; then
-                                    sudo ln -s "${NGINX_CONF_FILE}" "${NGINX_ENABLED_DIR}/"
+                                if [ ! -L "\${NGINX_ENABLED_DIR}/${serviceName}" ]; then
+                                    sudo ln -s "\${NGINX_CONF_FILE}" "\${NGINX_ENABLED_DIR}/"
                                 fi
 
                                 # Probar configuración de Nginx y reiniciar
